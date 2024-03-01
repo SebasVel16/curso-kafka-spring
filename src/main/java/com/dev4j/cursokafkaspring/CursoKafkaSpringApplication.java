@@ -1,6 +1,7 @@
 package com.dev4j.cursokafkaspring;
 
 import ch.qos.logback.core.util.FixedDelay;
+import com.dev4j.cursokafkaspring.models.Product;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -16,40 +17,30 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.util.concurrent.ListenableFuture;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @SpringBootApplication
 public class CursoKafkaSpringApplication {
 
-	@Autowired
-	private MeterRegistry meterRegistry;
-
 	private static final Logger log = LoggerFactory.getLogger(CursoKafkaSpringApplication.class);
 
 	@Autowired
-	private KafkaTemplate<String,String> kafkaTemplate;
+	private KafkaTemplate<String, Product> kafkaTemplate;
 
-	@KafkaListener(topics = "devs4j-topic",containerFactory = "listenerContainerFactory",groupId = "devs4j-group", properties = {
-			"max.poll.interval.ms:4000",
-			"max.poll.records:50"
-	})
-	public void listen(List<ConsumerRecord<String,String>> messages) {
-		log.info("Start messaging");
-		for (ConsumerRecord<String,String> message : messages) {
-			log.info("Message received = {}, partition = {}, offset = {}", message.value(), message.partition(), message.offset());
-		}
-		log.info("Batch Complete");
+	@KafkaListener(topics = "devs4j-topic",containerFactory = "listenerContainerFactory",groupId = "devs4j-group")
+	public void listen(ConsumerRecord<String,Product> record) {
+		log.info("Message received = {}", record.value().toString());
 	}
-
 	public static void main(String[] args) {
 		SpringApplication.run(CursoKafkaSpringApplication.class, args);
 	}
 
-	@Scheduled(fixedDelay = 2000,initialDelay = 100)
+	@Scheduled(fixedDelay = 5000,initialDelay = 100)
 	public void sendKafkaMessages() {
-		for (int i= 0 ;i<100;i++){
-			kafkaTemplate.send("devs4j-topic",String.valueOf(i), String.format("Sample Message = %d", i));
-		}
+		Product product = new Product();
+		product.setPrice(10);
+		product.setDescription("Un banano");
+		product.setName("Banano");
+			kafkaTemplate.send("devs4j-topic","devs4j-key", product);
 	}
 
 
